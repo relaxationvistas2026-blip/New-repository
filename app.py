@@ -2047,7 +2047,7 @@ html_code = f"""
                     if (cols[j].classList.contains("checkbox-cell") || j === cols.length - 1) continue;
                     
                     let text = cols[j].innerText.trim();
-                    text = text.replace(/(\r\n|\n|\r)/gm, " ");
+                    text = text.replace(/(\\r\\n|\\n|\\r)/gm, " ");
                     text = text.replace(/"/g, '""'); // Escape double quotes
                     row.push('"' + text + '"');
                 }}
