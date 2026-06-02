@@ -1,0 +1,12 @@
+Payment ID,Customer,Method,Amount,Status,Date
+PAY-192540,Trevor,Bank Transfer,$156.00,Paid,May 30
+PAY-192539,Mike,Bank Transfer,$213.00,Paid,May 30
+PAY-192538,Mary,Bank Transfer,$56.00,Paid,May 30
+PAY-192537,Leo,Bank Transfer,$350.00,Paid,May 30
+PAY-192536,Leo,Bank Transfer,$42.00,Paid,May 29
+PAY-192535,Justin Bieber,Credit Card,$45.00,Paid,May 29
+PAY-192534,Julia,Bank Transfer,$1252.00,Paid,May 30
+PAY-192533,Jeneffer,Bank Transfer,$70.00,Cancelled,May 28
+PAY-192532,Haily,Bank Transfer,$210.00,Paid,Jun 02
+PAY-192531,Avril,Bank Transfer,$25.00,Paid,May 30
+PAY-192530,Avril,Bank Transfer,$50.00,Paid,May 29
