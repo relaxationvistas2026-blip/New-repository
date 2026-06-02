@@ -71,7 +71,7 @@ def load_and_process_data(file_path):
         addr = info["address"]
         order_type = "Shipping" if ("Thailand" in addr or "," in addr) and "N/A" not in addr else "Pickups"
         
-        # Collect product list
+        # Collect product list (with Size and Color details from spreadsheet!)
         products = []
         for _, row in group.iterrows():
             products.append({
@@ -79,7 +79,9 @@ def load_and_process_data(file_path):
                 "name": str(row["Product Name"]),
                 "units": int(row["Units Sold"]),
                 "price": float(row["Revenue (USD)"]) / max(1, int(row["Units Sold"])),
-                "total": float(row["Revenue (USD)"])
+                "total": float(row["Revenue (USD)"]),
+                "color": str(row["Color Sold"]) if pd.notna(row["Color Sold"]) else "N/A",
+                "size": str(row["Size"]) if pd.notna(row["Size"]) else "N/A"
             })
             
         orders.append({
@@ -1949,23 +1951,6 @@ html_code = f"""
             }}
         }}
 
-        function deselectAll() {{
-            selectedOrders.clear();
-            renderOrdersTable();
-        }}
-
-        function updateActionOverlay() {{
-            const overlay = document.getElementById("actionOverlay");
-            const badge = document.getElementById("selectedCountText");
-            
-            if (selectedOrders.size > 0 && activeTab === 'orders') {{
-                badge.innerText = `Selected: ${{selectedOrders.size}}`;
-                overlay.classList.add("active");
-            }} else {{
-                overlay.classList.remove("active");
-            }}
-        }}
-
         // Popover Details Modal
         function showOrderDetails(orderId, event) {{
             const order = ordersData.find(o => o.order_id === orderId);
@@ -1992,7 +1977,7 @@ html_code = f"""
                         <div class="modal-item-thumb">📦</div>
                         <div class="modal-item-text">
                             <span class="modal-item-name">${{p.name}}</span>
-                            <span class="modal-item-meta">${{p.units}} × $${{p.price.toFixed(2)}}</span>
+                            <span class="modal-item-meta">${{p.units}} × $${{p.price.toFixed(2)}} (${{p.size}}, ${{p.color}})</span>
                         </div>
                     </div>
                     <span class="modal-item-price">$${{p.total.toFixed(2)}}</span>
@@ -2122,14 +2107,16 @@ html_code = f"""
             csv.push([`"Phone"`, `"${{order.phone}}"`]);
             csv.push([`"Shipping Address"`, `"${{order.address}}"`]);
             csv.push([]);
-            csv.push([`"Product Name"`, `"Units"`, `"Price"`, `"Total"`]);
+            csv.push([`"Product Name"`, `"Units"`, `"Price"`, `"Total"`, `"Size"`, `"Color"`]);
             
             order.products.forEach(p => {{
                 csv.push([
                     `"${{p.name}}"`,
                     p.units,
                     `$${{p.price.toFixed(2)}}`,
-                    `$${{p.total.toFixed(2)}}`
+                    `$${{p.total.toFixed(2)}}`,
+                    `"${{p.size}}"`,
+                    `"${{p.color}}"`
                 ]);
             }});
             
