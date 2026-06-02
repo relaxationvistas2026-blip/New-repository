@@ -5,8 +5,8 @@ import os
 
 # Set page config for a full-width experience and tab title
 st.set_page_config(
-    page_title="Avril Sales Dashboard",
-    page_icon="⚡",
+    page_title="Ex Com Sales Dashboard",
+    page_icon="🛒",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -30,14 +30,14 @@ def load_and_process_data(file_path):
     df_inventory.columns = df_inventory.columns.str.strip()
     
     # Handle dates
-    df_sales["Date"] = pd.to_datetime(df_sales["Date"]).dt.strftime("%b %d")
-    df_customers["Date"] = pd.to_datetime(df_customers["Date"]).dt.strftime("%b %d")
+    df_sales["Date"] = pd.to_datetime(df_sales["Date"]).dt.strftime("%Y-%m-%d")
+    df_customers["Date"] = pd.to_datetime(df_customers["Date"]).dt.strftime("%Y-%m-%d")
     
     # Group Sales into Orders by (Customer, Date)
     orders_grouped = df_sales.groupby(["Customer", "Date"])
     
     orders = []
-    order_id_counter = 192530
+    order_id_counter = 745
     
     # Map customers to their contact info
     cust_info = {}
@@ -61,31 +61,35 @@ def load_and_process_data(file_path):
         total_revenue = float(group["Revenue (USD)"].sum())
         
         # Determine status deterministically
-        status = "Paid"
+        status = "Complete"
         if customer_name_clean == "Jeneffer":
-            status = "Cancelled"
+            status = "Cancel"
         elif customer_name_clean == "AvrilLwin":
-            status = "Refunded"
+            status = "Hold"
+        elif customer_name_clean == "Trevor":
+            status = "Pending"
             
-        # Determine type based on address
         addr = info["address"]
         order_type = "Shipping" if ("Thailand" in addr or "," in addr) and "N/A" not in addr else "Pickups"
         
         # Collect product list (with Size and Color details from spreadsheet!)
         products = []
+        total_units = 0
         for _, row in group.iterrows():
+            units = int(row["Units Sold"])
+            total_units += units
             products.append({
                 "id": str(row["Product ID"]),
                 "name": str(row["Product Name"]),
-                "units": int(row["Units Sold"]),
-                "price": float(row["Revenue (USD)"]) / max(1, int(row["Units Sold"])),
+                "units": units,
+                "price": float(row["Revenue (USD)"]) / max(1, units),
                 "total": float(row["Revenue (USD)"]),
                 "color": str(row["Color Sold"]) if pd.notna(row["Color Sold"]) else "N/A",
                 "size": str(row["Size"]) if pd.notna(row["Size"]) else "N/A"
             })
             
         orders.append({
-            "order_id": f"#{order_id_counter}",
+            "order_id": f"#00{order_id_counter}",
             "customer": customer_name_clean,
             "email": info["email"],
             "phone": info["phone"],
@@ -95,9 +99,11 @@ def load_and_process_data(file_path):
             "products": products,
             "main_product": products[0]["name"] if len(products) > 0 else "N/A",
             "total": total_revenue,
+            "total_units": f"{total_units} items" if total_units > 1 else f"{total_units} item",
+            "paid": "Yes" if status in ["Complete", "Hold"] else "No",
             "date": date
         })
-        order_id_counter += 1
+        order_id_counter += 12
         
     # Reversing to show latest first
     orders.reverse()
@@ -153,9 +159,9 @@ orders, top_sellers, inventory, customers = load_and_process_data(excel_file)
 # Aggregate dynamic stats for calculations
 total_revenue = sum(o["total"] for o in orders)
 total_orders_count = len(orders)
-paid_count = sum(1 for o in orders if o["status"] == "Paid")
-cancelled_count = sum(1 for o in orders if o["status"] == "Cancelled")
-refunded_count = sum(1 for o in orders if o["status"] == "Refunded")
+paid_count = sum(1 for o in orders if o["status"] == "Complete")
+cancelled_count = sum(1 for o in orders if o["status"] == "Cancel")
+refunded_count = sum(1 for o in orders if o["status"] == "Hold")
 
 paid_pct = round((paid_count / total_orders_count) * 100) if total_orders_count > 0 else 0
 cancelled_pct = round((cancelled_count / total_orders_count) * 100) if total_orders_count > 0 else 0
@@ -177,7 +183,8 @@ html_code = f"""
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avril Sales Dashboard</title>
+    <title>Ex Com Sales Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {{
             margin: 0;
@@ -188,8 +195,8 @@ html_code = f"""
         }}
         
         body {{
-            background-color: #f8fafc;
-            color: #1e293b;
+            background-color: #f6f8fa;
+            color: #1a1c1e;
             overflow-x: hidden;
         }}
 
@@ -199,92 +206,51 @@ html_code = f"""
             width: 100vw;
         }}
 
-        /* Left Sidebar: Midnight Navy Theme */
+        /* Left Sidebar: Pure White, Minimalist Theme */
         .sidebar {{
-            width: 260px;
-            background-color: #0b1329;
-            color: #94a3b8;
+            width: 240px;
+            background-color: #ffffff;
+            color: #5c6066;
             padding: 24px 16px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             flex-shrink: 0;
-            border-right: 1px solid #1e293b;
+            border-right: 1px solid #e9ecef;
         }}
 
         .sidebar-brand {{
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            color: #ffffff;
-            font-size: 20px;
+            color: #1a1c1e;
+            font-size: 22px;
             font-weight: 700;
-            margin-bottom: 24px;
+            margin-bottom: 32px;
             padding: 0 8px;
-        }}
-
-        .brand-logo {{
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            gap: 12px;
         }}
 
         .brand-logo-icon {{
-            width: 24px;
-            height: 24px;
-            background: linear-gradient(135deg, #6366f1, #3b82f6);
-            border-radius: 6px;
+            font-size: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 900;
-            font-size: 14px;
-            color: #ffffff;
         }}
 
-        .sidebar-collapse-btn {{
-            cursor: pointer;
-            color: #475569;
-            transition: color 0.2s;
-        }}
-
-        .sidebar-collapse-btn:hover {{
-            color: #94a3b8;
-        }}
-
-        .search-box {{
-            background-color: #111e3b;
-            border: 1px solid #1e293b;
-            border-radius: 8px;
-            padding: 10px 14px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 24px;
-        }}
-
-        .search-box input {{
-            background: transparent;
-            border: none;
-            outline: none;
-            color: #ffffff;
-            font-size: 14px;
-            width: 100%;
-        }}
-
-        .search-shortcut {{
+        .sidebar-section-title {{
             font-size: 11px;
-            background-color: #1e293b;
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: #475569;
+            font-weight: 700;
+            color: #a0a5ad;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin: 16px 8px 8px 8px;
         }}
 
         .menu-list {{
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
             margin-bottom: auto;
         }}
 
@@ -296,8 +262,8 @@ html_code = f"""
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 10px 12px;
-            color: #94a3b8;
+            padding: 10px 14px;
+            color: #5c6066;
             text-decoration: none;
             font-size: 14px;
             font-weight: 500;
@@ -305,170 +271,346 @@ html_code = f"""
             transition: all 0.2s;
         }}
 
-        .menu-item.active a, .menu-item a:hover {{
-            background-color: #111e3b;
-            color: #ffffff;
+        .menu-item.active a {{
+            background: #d9f99d; /* Lime/Light Green active background matching reference */
+            color: #1a1c1e;
+            font-weight: 600;
+        }}
+
+        .menu-item a:hover {{
+            background-color: #f1f3f5;
+            color: #1a1c1e;
         }}
 
         .menu-item .badge {{
-            background-color: #ef4444;
+            background-color: #14532d; /* Forest Green badge */
             color: #ffffff;
             font-size: 11px;
             font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 9999px;
+            padding: 2px 8px;
+            border-radius: 6px;
             margin-left: auto;
         }}
 
-        .sidebar-footer {{
-            padding-top: 16px;
-            border-top: 1px solid #1e293b;
+        /* Main Workspace: Single Column with Top Navbar */
+        .workspace-wrapper {{
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }}
+
+        /* Top Navbar */
+        .navbar {{
+            height: 70px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            flex-shrink: 0;
+        }}
+
+        .nav-search-box {{
+            background-color: #f1f3f5;
+            border-radius: 8px;
+            padding: 8px 16px;
             display: flex;
             align-items: center;
             gap: 12px;
+            width: 320px;
         }}
 
-        .user-avatar {{
+        .nav-search-box input {{
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #1a1c1e;
+            font-size: 14px;
+            width: 100%;
+        }}
+
+        .nav-right {{
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }}
+
+        .nav-icon-btn {{
+            cursor: pointer;
+            font-size: 18px;
+            color: #5c6066;
+            position: relative;
+        }}
+
+        .nav-icon-btn .badge-dot {{
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 8px;
+            height: 8px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            border: 2px solid #ffffff;
+        }}
+
+        .nav-profile {{
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 1px solid #e9ecef;
+            padding-left: 20px;
+        }}
+
+        .nav-profile-avatar {{
             width: 36px;
             height: 36px;
-            background: linear-gradient(135deg, #10b981, #059669);
             border-radius: 50%;
+            background: linear-gradient(135deg, #166534, #14532d);
             display: flex;
             align-items: center;
             justify-content: center;
             color: #ffffff;
             font-weight: 600;
-            font-size: 14px;
         }}
 
-        .user-info {{
+        .nav-profile-info {{
             display: flex;
             flex-direction: column;
         }}
 
-        .user-name {{
-            color: #ffffff;
-            font-size: 14px;
+        .nav-profile-name {{
+            font-size: 13px;
             font-weight: 600;
+            color: #1a1c1e;
         }}
 
-        .user-role {{
-            color: #475569;
+        .nav-profile-email {{
             font-size: 11px;
+            color: #a0a5ad;
         }}
 
-        /* Main Workspace: Grid Layout */
+        /* Main Scrollable Workspace */
         .workspace {{
             flex-grow: 1;
-            display: grid;
-            grid-template-columns: 1fr 340px;
-            background-color: #f8fafc;
-        }}
-
-        /* Main Content Section */
-        .main-content {{
             padding: 32px;
-            border-right: 1px solid #e2e8f0;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            overflow-y: auto;
+            gap: 24px;
+        }}
+
+        /* Dashboard Overview Content */
+        .dashboard-grid {{
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }}
+
+        .dashboard-card {{
+            background-color: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
             position: relative;
         }}
 
-        .header-section {{
+        .dashboard-card-header {{
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
-        }}
-
-        .header-title {{
-            font-size: 28px;
-            font-weight: 700;
-            color: #0f172a;
-        }}
-
-        .header-actions {{
-            display: flex;
-            gap: 12px;
-        }}
-
-        .btn {{
-            padding: 8px 16px;
-            border-radius: 8px;
+            color: #5c6066;
             font-size: 14px;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
+        }}
+
+        .dashboard-card-val {{
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a1c1e;
+        }}
+
+        .dashboard-card-footer {{
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #a0a5ad;
         }}
 
-        .btn-dark {{
-            background-color: #0f172a;
-            color: #ffffff;
-            border: 1px solid #0f172a;
-        }}
-
-        .btn-dark:hover {{
-            background-color: #1e293b;
-        }}
-
-        .btn-light {{
-            background-color: #ffffff;
-            color: #334155;
-            border: 1px solid #e2e8f0;
-        }}
-
-        .btn-light:hover {{
-            background-color: #f1f5f9;
-        }}
-
-        /* Filter Section */
-        .filters-section {{
-            display: flex;
-            gap: 8px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-        }}
-
-        .filter-pill {{
-            padding: 6px 14px;
-            border-radius: 9999px;
-            background-color: #ffffff;
-            border: 1px solid #e2e8f0;
-            color: #475569;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
+        .card-change-badge {{
+            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 6px;
-            transition: all 0.2s;
+            gap: 4px;
         }}
 
-        .filter-pill:hover {{
-            background-color: #f1f5f9;
-            color: #0f172a;
+        .card-change-badge.up {{
+            color: #10b981;
         }}
 
-        .filter-pill.active {{
-            background-color: #0f172a;
-            color: #ffffff;
-            border-color: #0f172a;
+        .card-change-badge.down {{
+            color: #ef4444;
         }}
 
-        /* Custom Tables Layout */
-        .table-container {{
+        /* Layout for Analytics and Traffic Source side by side */
+        .analytics-row {{
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }}
+
+        .analytics-card {{
             background-color: #ffffff;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #e9ecef;
             border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            flex-grow: 1;
-            margin-bottom: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }}
+
+        .analytics-card-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+
+        .analytics-card-title {{
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1c1e;
+        }}
+
+        /* Custom Visual Charts */
+        .revenue-chart-container {{
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            height: 220px;
+            padding-top: 20px;
+            border-bottom: 1px solid #f1f3f5;
+        }}
+
+        .revenue-bar-wrapper {{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            width: 6%;
+        }}
+
+        .revenue-bar-fill {{
+            width: 100%;
+            background-color: #166534; /* Forest Green bar chart color matching reference */
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            transition: height 0.5s ease-out;
+            min-height: 4px;
+        }}
+
+        .revenue-bar-lbl {{
+            font-size: 11px;
+            color: #a0a5ad;
+        }}
+
+        /* Donut Chart visual */
+        .donut-chart-box {{
+            position: relative;
+            width: 130px;
+            height: 130px;
+            margin: 0 auto;
+        }}
+
+        .donut-svg {{
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }}
+
+        .donut-segment-1 {{
+            fill: none;
+            stroke: #166534; /* Forest Green */
+            stroke-width: 18;
+            stroke-dasharray: 282.7;
+            stroke-dashoffset: 70;
+        }}
+
+        .donut-segment-2 {{
+            fill: none;
+            stroke: #d9f99d; /* Lime/Light Green */
+            stroke-width: 18;
+            stroke-dasharray: 282.7;
+            stroke-dashoffset: 200;
+        }}
+
+        .donut-segment-3 {{
+            fill: none;
+            stroke: #f97316; /* Orange */
+            stroke-width: 18;
+            stroke-dasharray: 282.7;
+            stroke-dashoffset: 260;
+        }}
+
+        /* Traffic source legend table */
+        .traffic-table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 12px;
+        }}
+
+        .traffic-table th {{
+            text-align: left;
+            color: #a0a5ad;
+            font-weight: 500;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f1f3f5;
+        }}
+
+        .traffic-table td {{
+            padding: 8px 0;
+            color: #1a1c1e;
+        }}
+
+        .traffic-dot {{
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }}
+
+        /* Data Tables styling (Recent Orders, etc.) */
+        .table-card {{
+            background-color: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }}
+
+        .table-card-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }}
+
+        .table-title {{
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1c1e;
+        }}
+
+        .data-table-wrapper {{
+            overflow-x: auto;
         }}
 
         .custom-data-table {{
@@ -479,505 +621,84 @@ html_code = f"""
         }}
 
         .custom-data-table th {{
-            background-color: #f8fafc;
-            padding: 14px 16px;
+            padding: 12px 16px;
             font-weight: 600;
-            color: #64748b;
-            border-bottom: 1px solid #e2e8f0;
+            color: #a0a5ad;
+            border-bottom: 1px solid #e9ecef;
+            background-color: #fafbfc;
         }}
 
         .custom-data-table td {{
             padding: 16px;
-            border-bottom: 1px solid #f1f5f9;
-            color: #334155;
+            border-bottom: 1px solid #e9ecef;
+            color: #5c6066;
             vertical-align: middle;
         }}
 
         .custom-data-table tr:hover {{
-            background-color: #f8fafc;
-        }}
-
-        /* Checkbox Styling */
-        .checkbox-cell {{
-            width: 48px;
-            text-align: center;
-        }}
-
-        .custom-checkbox {{
-            width: 16px;
-            height: 16px;
-            border-radius: 4px;
-            border: 1px solid #cbd5e1;
+            background-color: #fafbfc;
             cursor: pointer;
-            display: inline-block;
-            position: relative;
         }}
 
-        .custom-checkbox.checked {{
-            background-color: #0f172a;
-            border-color: #0f172a;
-        }}
-
-        .custom-checkbox.checked::after {{
-            content: "✓";
-            color: #ffffff;
-            font-size: 11px;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-weight: bold;
-        }}
-
-        /* Customer Profile & Avatar */
-        .customer-cell {{
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }}
-
-        .cust-avatar {{
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background-color: #e2e8f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 12px;
-            color: #475569;
-        }}
-
-        .cust-name {{
-            font-weight: 500;
-            color: #0f172a;
-        }}
-
-        /* Badge Statuses */
-        .badge-status {{
-            padding: 4px 10px;
+        /* Badge status styling to match new design style */
+        .badge-pill {{
+            padding: 4px 12px;
             border-radius: 6px;
             font-size: 12px;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
         }}
 
-        .badge-status.paid, .badge-status.healthy {{
-            color: #10b981;
-            background-color: #ecfdf5;
+        .badge-pill.complete {{
+            color: #15803d;
+            background-color: #dcfce7;
         }}
 
-        .badge-status.paid::before, .badge-status.healthy::before {{
-            content: "🟢";
-            font-size: 8px;
+        .badge-pill.pending {{
+            color: #b45309;
+            background-color: #fef3c7;
         }}
 
-        .badge-status.cancelled, .badge-status.low {{
-            color: #ef4444;
-            background-color: #fef2f2;
+        .badge-pill.cancel {{
+            color: #b91c1c;
+            background-color: #fee2e2;
         }}
 
-        .badge-status.cancelled::before, .badge-status.low::before {{
-            content: "🔴";
-            font-size: 8px;
+        .badge-pill.hold {{
+            color: #1e3a8a;
+            background-color: #dbeafe;
         }}
 
-        .badge-status.refunded {{
-            color: #64748b;
-            background-color: #f1f5f9;
+        /* Paid status badges matching 'Yes'/'No' pill shapes */
+        .paid-badge {{
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
         }}
 
-        .badge-status.refunded::before {{
-            content: "⚫";
-            font-size: 8px;
+        .paid-badge.yes {{
+            color: #15803d;
+            background-color: #dcfce7;
+        }}
+
+        .paid-badge.no {{
+            color: #b45309;
+            background-color: #ffedd5;
         }}
 
         /* Action Menu dots */
         .action-dots {{
-            color: #94a3b8;
-            font-weight: bold;
+            color: #a0a5ad;
             cursor: pointer;
+            font-weight: bold;
             font-size: 18px;
-            text-align: center;
-            width: 24px;
         }}
 
         .action-dots:hover {{
-            color: #334155;
-        }}
-
-        /* Analytics Sidebar */
-        .analytics-sidebar {{
-            background-color: #ffffff;
-            padding: 32px 24px;
-            overflow-y: auto;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            gap: 32px;
-            border-left: 1px solid #e2e8f0;
-        }}
-
-        .analytics-title {{
-            font-size: 13px;
-            font-weight: 700;
-            color: #475569;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }}
-
-        /* Circular Progress Chart */
-        .receipt-card {{
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            border-bottom: 1px solid #f1f5f9;
-            padding-bottom: 24px;
-        }}
-
-        .chart-box {{
-            position: relative;
-            width: 140px;
-            height: 140px;
-            margin: 0 auto;
-        }}
-
-        .chart-svg {{
-            transform: rotate(-90deg);
-            width: 100%;
-            height: 100%;
-        }}
-
-        .chart-bg-circle {{
-            fill: none;
-            stroke: #e2e8f0;
-            stroke-width: 12;
-        }}
-
-        .chart-progress-circle {{
-            fill: none;
-            stroke: #10b981;
-            stroke-width: 12;
-            stroke-dasharray: 339;
-            stroke-dashoffset: 80;
-            stroke-linecap: round;
-            transition: stroke-dashoffset 1s ease-out;
-        }}
-
-        .chart-center-text {{
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-        }}
-
-        .chart-val {{
-            font-size: 20px;
-            font-weight: 700;
-            color: #0f172a;
-        }}
-
-        .chart-lbl {{
-            font-size: 11px;
-            color: #64748b;
-            margin-top: 2px;
-        }}
-
-        .receipt-breakdown {{
-            display: flex;
-            justify-content: space-between;
-            margin-top: 12px;
-        }}
-
-        .breakdown-item {{
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }}
-
-        .breakdown-val {{
-            font-size: 16px;
-            font-weight: 700;
-            color: #0f172a;
-        }}
-
-        .breakdown-lbl {{
-            font-size: 11px;
-            color: #64748b;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }}
-
-        .bullet {{
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-        }}
-
-        .bullet-green {{ background-color: #10b981; }}
-        .bullet-blue {{ background-color: #3b82f6; }}
-
-        /* Status Progress Bars */
-        .status-card {{
-            border-bottom: 1px solid #f1f5f9;
-            padding-bottom: 24px;
-        }}
-
-        .status-header {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }}
-
-        .status-dropdown {{
-            font-size: 12px;
-            font-weight: 600;
-            color: #475569;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }}
-
-        .progress-bar-container {{
-            display: flex;
-            height: 8px;
-            border-radius: 9999px;
-            overflow: hidden;
-            background-color: #e2e8f0;
-            margin-bottom: 16px;
-        }}
-
-        .progress-paid {{ background-color: #10b981; width: {paid_pct}%; }}
-        .progress-cancelled {{ background-color: #ef4444; width: {cancelled_pct}%; }}
-        .progress-refunded {{ background-color: #64748b; width: {refunded_pct}%; }}
-
-        .status-legend {{
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }}
-
-        .legend-row {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 13px;
-        }}
-
-        .legend-name {{
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #475569;
-        }}
-
-        .legend-val {{
-            font-weight: 600;
-            color: #0f172a;
-        }}
-
-        /* Overview Metrics Grid */
-        .overview-card {{
-            border-bottom: 1px solid #f1f5f9;
-            padding-bottom: 24px;
-        }}
-
-        .overview-grid {{
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-top: 16px;
-        }}
-
-        .metric-cell {{
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }}
-
-        .metric-val {{
-            font-size: 18px;
-            font-weight: 700;
-            color: #0f172a;
-        }}
-
-        .metric-lbl {{
-            font-size: 11px;
-            color: #64748b;
-        }}
-
-        /* Top Sellers list */
-        .sellers-card {{
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }}
-
-        .seller-row {{
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 0;
-        }}
-
-        .seller-item {{
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }}
-
-        .seller-icon {{
-            width: 36px;
-            height: 36px;
-            background-color: #f1f5f9;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }}
-
-        .seller-info {{
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }}
-
-        .seller-name {{
-            font-size: 13px;
-            font-weight: 600;
-            color: #0f172a;
-            max-width: 170px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }}
-
-        .seller-desc {{
-            font-size: 11px;
-            color: #64748b;
-        }}
-
-        .seller-count {{
-            font-size: 13px;
-            font-weight: 700;
-            color: #0f172a;
-        }}
-
-        /* Dashboard Overview Content */
-        .dashboard-grid {{
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 24px;
-            margin-bottom: 32px;
-        }}
-
-        .dashboard-card {{
-            background-color: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }}
-
-        .dashboard-card-title {{
-            font-size: 13px;
-            font-weight: 600;
-            color: #64748b;
-            text-transform: uppercase;
-        }}
-
-        .dashboard-card-val {{
-            font-size: 28px;
-            font-weight: 700;
-            color: #0f172a;
-        }}
-
-        .dashboard-card-change {{
-            font-size: 12px;
-            font-weight: 600;
-            color: #10b981;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }}
-
-        .dashboard-row-layout {{
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 24px;
-            margin-bottom: 24px;
-        }}
-
-        .dashboard-section {{
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }}
-
-        .dashboard-section-title {{
-            font-size: 18px;
-            font-weight: 700;
-            color: #0f172a;
-            margin-bottom: 16px;
-        }}
-
-        /* Custom Mini Charts for Dashboard */
-        .visual-bar-chart {{
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 16px;
-        }}
-
-        .visual-bar-row {{
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }}
-
-        .visual-bar-lbl {{
-            font-size: 13px;
-            color: #475569;
-            width: 140px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }}
-
-        .visual-bar-track {{
-            flex-grow: 1;
-            height: 12px;
-            background-color: #f1f5f9;
-            border-radius: 6px;
-            overflow: hidden;
-        }}
-
-        .visual-bar-fill {{
-            height: 100%;
-            background: linear-gradient(90deg, #6366f1, #3b82f6);
-            border-radius: 6px;
-        }}
-
-        .visual-bar-val {{
-            font-size: 13px;
-            font-weight: 600;
-            color: #0f172a;
-            width: 50px;
-            text-align: right;
+            color: #1a1c1e;
         }}
 
         /* Floating Bottom Action Overlay */
@@ -986,11 +707,11 @@ html_code = f"""
             bottom: 32px;
             left: 50%;
             transform: translateX(-50%) translateY(100px);
-            background-color: #0f172a;
+            background-color: #1a1c1e;
             color: #ffffff;
             padding: 12px 24px;
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
             display: flex;
             align-items: center;
             gap: 16px;
@@ -1004,7 +725,7 @@ html_code = f"""
 
         .action-overlay-close {{
             cursor: pointer;
-            color: #475569;
+            color: #5c6066;
             font-size: 16px;
             font-weight: bold;
             padding: 0 4px;
@@ -1015,11 +736,11 @@ html_code = f"""
         }}
 
         .selected-count-badge {{
-            border-right: 1px solid #1e293b;
+            border-right: 1px solid #2d3139;
             padding-right: 16px;
             font-size: 14px;
             font-weight: 500;
-            color: #94a3b8;
+            color: #a0a5ad;
         }}
 
         .overlay-btns {{
@@ -1042,7 +763,7 @@ html_code = f"""
         }}
 
         .btn-overlay:hover {{
-            background-color: #1e293b;
+            background-color: #2d3139;
         }}
 
         /* Details Popover Card Modal */
@@ -1052,7 +773,7 @@ html_code = f"""
             left: 0;
             width: 100vw;
             height: 100vh;
-            background-color: rgba(15, 23, 42, 0.4);
+            background-color: rgba(26, 28, 30, 0.3);
             backdrop-filter: blur(4px);
             z-index: 200;
             display: flex;
@@ -1073,9 +794,10 @@ html_code = f"""
             background-color: #ffffff;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
             transform: scale(0.95);
             transition: transform 0.2s ease-out;
+            border: 1px solid #e9ecef;
         }}
 
         .modal-overlay.active .modal-card {{
@@ -1083,7 +805,7 @@ html_code = f"""
         }}
 
         .modal-header {{
-            background-color: #0f172a;
+            background-color: #1a1c1e;
             color: #ffffff;
             padding: 16px 20px;
             display: flex;
@@ -1110,7 +832,7 @@ html_code = f"""
 
         .modal-action-icon {{
             cursor: pointer;
-            color: #94a3b8;
+            color: #a0a5ad;
             transition: color 0.2s;
         }}
 
@@ -1134,17 +856,17 @@ html_code = f"""
             align-items: center;
             gap: 10px;
             font-size: 13px;
-            color: #475569;
+            color: #5c6066;
         }}
 
         .modal-info-row span.bold {{
             font-weight: 600;
-            color: #0f172a;
+            color: #1a1c1e;
         }}
 
         .modal-tabs {{
             display: flex;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e9ecef;
             margin-bottom: 20px;
         }}
 
@@ -1153,14 +875,14 @@ html_code = f"""
             cursor: pointer;
             font-size: 13px;
             font-weight: 600;
-            color: #64748b;
+            color: #a0a5ad;
             border-bottom: 2px solid transparent;
             transition: all 0.2s;
         }}
 
         .modal-tab.active {{
-            color: #0f172a;
-            border-bottom-color: #0f172a;
+            color: #1a1c1e;
+            border-bottom-color: #1a1c1e;
         }}
 
         .modal-item-list {{
@@ -1187,7 +909,7 @@ html_code = f"""
         .modal-item-thumb {{
             width: 32px;
             height: 32px;
-            background-color: #f1f5f9;
+            background-color: #f1f3f5;
             border-radius: 6px;
             display: flex;
             align-items: center;
@@ -1205,19 +927,19 @@ html_code = f"""
         .modal-item-name {{
             font-size: 13px;
             font-weight: 600;
-            color: #0f172a;
+            color: #1a1c1e;
             line-height: 1.4;
         }}
 
         .modal-item-meta {{
             font-size: 12px;
-            color: #64748b;
+            color: #a0a5ad;
         }}
 
         .modal-item-price {{
             font-size: 13px;
             font-weight: 700;
-            color: #0f172a;
+            color: #1a1c1e;
             text-align: right;
         }}
 
@@ -1226,20 +948,20 @@ html_code = f"""
             justify-content: space-between;
             align-items: center;
             padding-top: 16px;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid #e9ecef;
             margin-bottom: 24px;
         }}
 
         .modal-total-lbl {{
             font-size: 13px;
-            color: #475569;
+            color: #5c6066;
             font-weight: 500;
         }}
 
         .modal-total-val {{
             font-size: 16px;
             font-weight: 700;
-            color: #0f172a;
+            color: #1a1c1e;
         }}
 
         .modal-footer {{
@@ -1247,8 +969,8 @@ html_code = f"""
             justify-content: space-between;
             align-items: center;
             padding: 16px 20px;
-            background-color: #f8fafc;
-            border-top: 1px solid #e2e8f0;
+            background-color: #fafbfc;
+            border-top: 1px solid #e9ecef;
         }}
 
         .modal-footer-btns {{
@@ -1260,7 +982,7 @@ html_code = f"""
             padding: 6px 12px;
             border: 1px solid #cbd5e1;
             background-color: #ffffff;
-            color: #334155;
+            color: #5c6066;
             font-size: 12px;
             font-weight: 600;
             border-radius: 6px;
@@ -1271,7 +993,7 @@ html_code = f"""
         }}
 
         .btn-modal-action:hover {{
-            background-color: #f1f5f9;
+            background-color: #f1f3f5;
         }}
     </style>
 </head>
@@ -1281,355 +1003,335 @@ html_code = f"""
         <aside class="sidebar">
             <div>
                 <div class="sidebar-brand">
-                    <div class="brand-logo">
-                        <div class="brand-logo-icon">A</div>
-                        <span>Avril</span>
-                    </div>
-                    <div class="sidebar-collapse-btn">←</div>
+                    <span class="brand-logo-icon">🛒</span>
+                    <span>Ex Com</span>
                 </div>
 
-                <div class="search-box">
-                    <span>🔍</span>
-                    <input type="text" id="searchInput" placeholder="Search data..." onkeyup="filterTableSearch()">
-                    <span class="search-shortcut">⌘ F</span>
-                </div>
-
+                <div class="sidebar-section-title">MENU</div>
                 <ul class="menu-list">
-                    <li class="menu-item" id="menu-dashboard" onclick="switchTab('dashboard', this)"><a>📊 Dashboard</a></li>
-                    <li class="menu-item active" id="menu-orders" onclick="switchTab('orders', this)"><a>📋 Orders</a></li>
-                    <li class="menu-item" id="menu-inventory" onclick="switchTab('inventory', this)"><a>📦 Inventory</a></li>
-                    <li class="menu-item" id="menu-payments" onclick="switchTab('payments', this)"><a>💳 Payments</a></li>
-                    <li class="menu-item" id="menu-customers" onclick="switchTab('customers', this)"><a>👥 Customers</a></li>
+                    <li class="menu-item active" id="menu-dashboard" onclick="switchTab('dashboard', this)"><a>📊 Dashboard</a></li>
+                    <li class="menu-item" id="menu-inventory" onclick="switchTab('inventory', this)"><a>📦 Products</a></li>
+                    <li class="menu-item" id="menu-customers" onclick="switchTab('customers', this)"><a>👥 Customer</a></li>
+                    <li class="menu-item" id="menu-payments" onclick="switchTab('payments', this)"><a>💳 Analytics</a></li>
+                    <li class="menu-item" id="menu-orders" onclick="switchTab('orders', this)"><a>📋 Orders</a></li>
+                    <li class="menu-item" onclick="alert('Coupons portal coming soon...')"><a>🏷️ Coupons</a></li>
+                    <li class="menu-item" onclick="alert('Chats and support panel')"><a>💬 Chats <span class="badge">4</span></a></li>
+                </ul>
+
+                <div class="sidebar-section-title" style="margin-top: 24px;">OTHER</div>
+                <ul class="menu-list">
+                    <li class="menu-item" onclick="alert('Integrations configured successfully')"><a>🔌 Integrations</a></li>
+                    <li class="menu-item" onclick="alert('Settings parameters updated')"><a>⚙️ Settings</a></li>
+                    <li class="menu-item" onclick="alert('Logged out successfully')"><a>🚪 Logout</a></li>
                 </ul>
             </div>
 
-            <div class="sidebar-footer">
-                <div class="user-avatar">OW</div>
-                <div class="user-info">
-                    <span class="user-name">Olivia Williams</span>
-                    <span class="user-role">Sales Manager</span>
+            <div class="sidebar-footer" style="border-top: 1px solid #e9ecef; padding-top: 16px;">
+                <div class="nav-profile-avatar" style="width: 32px; height: 32px;">OW</div>
+                <div class="nav-profile-info" style="margin-left: 8px;">
+                    <span class="nav-profile-name" style="font-size: 12px;">Olivia Williams</span>
+                    <span class="nav-profile-email" style="font-size: 10px;">Sales Manager</span>
                 </div>
-                <span style="margin-left: auto; cursor: pointer; color: #475569;">•••</span>
             </div>
         </aside>
 
-        <!-- Main Workspace -->
-        <div class="workspace">
-            <!-- 1. Dashboard Tab View -->
-            <main class="main-content" id="dashboard-view" style="display: none;">
-                <div class="header-section">
-                    <h1 class="header-title">Dashboard Overview</h1>
-                    <div class="header-actions">
-                        <button class="btn btn-light" onclick="alert('Refreshing dashboard metrics...')">🔄 Refresh</button>
-                        <button class="btn btn-dark" onclick="alert('Generating Sales Report PDF...')">📄 Report</button>
-                    </div>
+        <!-- Main Workspace Wrapper -->
+        <div class="workspace-wrapper">
+            <!-- Top Navbar -->
+            <header class="navbar">
+                <div class="nav-search-box">
+                    <span>🔍</span>
+                    <input type="text" id="searchInput" placeholder="Search something here..." onkeyup="filterTableSearch()">
                 </div>
-
-                <div class="dashboard-grid">
-                    <div class="dashboard-card">
-                        <span class="dashboard-card-title">Total Revenue</span>
-                        <span class="dashboard-card-val">${total_revenue:,.2f}</span>
-                        <span class="dashboard-card-change">▲ +12.4% this month</span>
-                    </div>
-                    <div class="dashboard-card">
-                        <span class="dashboard-card-title">Total Orders</span>
-                        <span class="dashboard-card-val">{total_orders_count}</span>
-                        <span class="dashboard-card-change">▲ +8.2% this week</span>
-                    </div>
-                    <div class="dashboard-card">
-                        <span class="dashboard-card-title">Avg. Order Value</span>
-                        <span class="dashboard-card-val">${avg_order_value:.2f}</span>
-                        <span class="dashboard-card-change" style="color: #64748b;">▬ Stable</span>
-                    </div>
-                    <div class="dashboard-card">
-                        <span class="dashboard-card-title">Product Categories</span>
-                        <span class="dashboard-card-val">5</span>
-                        <span class="dashboard-card-change">▲ Active stock</span>
-                    </div>
-                </div>
-
-                <div class="dashboard-row-layout">
-                    <div class="dashboard-section">
-                        <h3 class="dashboard-section-title">Sales Revenue Performance</h3>
-                        <div class="visual-bar-chart">
-                            {"".join(f'''
-                            <div class="visual-bar-row">
-                                <span class="visual-bar-lbl">{s["name"]}</span>
-                                <div class="visual-bar-track">
-                                    <div class="visual-bar-fill" style="width: {min(100, s["units"] * 8)}%;"></div>
-                                </div>
-                                <span class="visual-bar-val">${s["revenue"]:,.0f}</span>
-                            </div>
-                            ''' for s in top_sellers)}
+                <div class="nav-right">
+                    <span class="nav-icon-btn" onclick="alert('Notifications Center')">🔔<span class="badge-dot"></span></span>
+                    <span class="nav-icon-btn" onclick="alert('Support chats center')">💬</span>
+                    
+                    <div class="nav-profile">
+                        <div class="nav-profile-avatar">SH</div>
+                        <div class="nav-profile-info">
+                            <span class="nav-profile-name">Sifat Hasan</span>
+                            <span class="nav-profile-email">sifatux@gmail.com</span>
                         </div>
                     </div>
-                    <div class="dashboard-section">
-                        <h3 class="dashboard-section-title">Orders Breakdown</h3>
-                        <div class="status-legend" style="margin-top: 24px;">
-                            <div class="legend-row">
-                                <span class="legend-name"><span class="bullet bullet-green"></span> Paid Orders</span>
-                                <span class="legend-val">{paid_count} ({paid_pct}%)</span>
+                </div>
+            </header>
+
+            <!-- Scrollable workspace -->
+            <div class="workspace">
+                <!-- 1. Dashboard Tab View -->
+                <div id="dashboard-view" style="display: flex; flex-direction: column; gap: 24px; width: 100%;">
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card">
+                            <div class="dashboard-card-header">
+                                <span>Sales total</span>
+                                <span class="action-dots">•••</span>
                             </div>
-                            <div class="legend-row" style="margin-top: 12px;">
-                                <span class="legend-name"><span class="bullet" style="background-color: #ef4444;"></span> Cancelled Orders</span>
-                                <span class="legend-val">{cancelled_count} ({cancelled_pct}%)</span>
+                            <span class="dashboard-card-val">${total_revenue:,.2f}</span>
+                            <div class="dashboard-card-footer">
+                                <span class="card-change-badge up">▲ 26%</span>
+                                <span>Compared to December 2023</span>
                             </div>
-                            <div class="legend-row" style="margin-top: 12px;">
-                                <span class="legend-name"><span class="bullet" style="background-color: #64748b;"></span> Refunded Orders</span>
-                                <span class="legend-val">{refunded_count} ({refunded_pct}%)</span>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="dashboard-card-header">
+                                <span>Average order value</span>
+                                <span class="action-dots">•••</span>
+                            </div>
+                            <span class="dashboard-card-val">${avg_order_value:.2f}</span>
+                            <div class="dashboard-card-footer">
+                                <span class="card-change-badge down">▼ 16%</span>
+                                <span>Compared to December 2023</span>
+                            </div>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="dashboard-card-header">
+                                <span>Total orders</span>
+                                <span class="action-dots">•••</span>
+                            </div>
+                            <span class="dashboard-card-val">{total_orders_count}</span>
+                            <div class="dashboard-card-footer">
+                                <span class="card-change-badge up">▲ 46%</span>
+                                <span>Compared to December 2023</span>
                             </div>
                         </div>
                     </div>
-                </div>
-            </main>
 
-            <!-- 2. Orders Tab View -->
-            <main class="main-content" id="orders-view">
-                <div class="header-section">
-                    <h1 class="header-title">Orders</h1>
-                    <div class="header-actions">
-                        <button class="btn btn-light" onclick="alert('Importing CSV templates...')">↓ Import</button>
-                        <button class="btn btn-dark" onclick="exportTableToCSV('ordersTable', 'orders_report.csv')">↑ Export</button>
-                    </div>
-                </div>
-
-                <!-- Filters -->
-                <div class="filters-section">
-                    <div class="filter-pill active" onclick="setFilter('status', 'all', this)">All status</div>
-                    <div class="filter-pill" onclick="setFilter('status', 'Paid', this)">🟢 Paid</div>
-                    <div class="filter-pill" onclick="setFilter('status', 'Cancelled', this)">🔴 Cancelled</div>
-                    <div class="filter-pill" onclick="setFilter('status', 'Refunded', this)">⚫ Refunded</div>
-                    <div class="filter-pill" onclick="setFilter('type', 'Shipping', this)">🚚 Shipping</div>
-                    <div class="filter-pill" onclick="setFilter('type', 'Pickups', this)">🛍️ Pickups</div>
-                </div>
-
-                <!-- Table Container -->
-                <div class="table-container">
-                    <table class="custom-data-table" id="ordersTable">
-                        <thead>
-                            <tr>
-                                <th class="checkbox-cell">
-                                    <div class="custom-checkbox" id="headerCheckbox" onclick="toggleSelectAll()"></div>
-                                </th>
-                                <th>Order</th>
-                                <th>Customer</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th>Product</th>
-                                <th>Total</th>
-                                <th>Date</th>
-                                <th style="width: 48px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- JavaScript rendered rows -->
-                        </tbody>
-                    </table>
-                </div>
-            </main>
-
-            <!-- 3. Inventory Tab View -->
-            <main class="main-content" id="inventory-view" style="display: none;">
-                <div class="header-section">
-                    <h1 class="header-title">Inventory & Stock</h1>
-                    <div class="header-actions">
-                        <button class="btn btn-light" onclick="alert('Ordering new stock from suppliers...')">📦 Reorder</button>
-                        <button class="btn btn-dark" onclick="exportTableToCSV('inventoryTable', 'inventory_report.csv')">↑ Export</button>
-                    </div>
-                </div>
-
-                <div class="table-container">
-                    <table class="custom-data-table" id="inventoryTable">
-                        <thead>
-                            <tr>
-                                <th>Product ID</th>
-                                <th>Product Name</th>
-                                <th>Category</th>
-                                <th>Price</th>
-                                <th>Current Stock</th>
-                                <th>Original Stock</th>
-                                <th>Units Sold</th>
-                                <th>Status</th>
-                                <th style="width: 48px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- JavaScript rendered inventory rows -->
-                        </tbody>
-                    </table>
-                </div>
-            </main>
-
-            <!-- 4. Payments Tab View -->
-            <main class="main-content" id="payments-view" style="display: none;">
-                <div class="header-section">
-                    <h1 class="header-title">Payments Log</h1>
-                    <div class="header-actions">
-                        <button class="btn btn-light" onclick="alert('Generating invoice statements...')">🧾 Invoices</button>
-                        <button class="btn btn-dark" onclick="exportTableToCSV('paymentsTable', 'payments_report.csv')">↑ Export</button>
-                    </div>
-                </div>
-
-                <div class="table-container">
-                    <table class="custom-data-table" id="paymentsTable">
-                        <thead>
-                            <tr>
-                                <th>Payment ID</th>
-                                <th>Customer</th>
-                                <th>Method</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Date</th>
-                                <th style="width: 48px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- JavaScript rendered payment rows -->
-                        </tbody>
-                    </table>
-                </div>
-            </main>
-
-            <!-- 5. Customers Tab View -->
-            <main class="main-content" id="customers-view" style="display: none;">
-                <div class="header-section">
-                    <h1 class="header-title">Customers Directory</h1>
-                    <div class="header-actions">
-                        <button class="btn btn-light" onclick="alert('Exporting customers email listings...')">✉️ Email list</button>
-                        <button class="btn btn-dark" onclick="exportTableToCSV('customersTable', 'customers_report.csv')">↑ Export</button>
-                    </div>
-                </div>
-
-                <div class="table-container">
-                    <table class="custom-data-table" id="customersTable">
-                        <thead>
-                            <tr>
-                                <th>Customer</th>
-                                <th>Email</th>
-                                <th>Phone</th>
-                                <th>Shipping Address</th>
-                                <th>Total Orders</th>
-                                <th>Total Spent</th>
-                                <th style="width: 48px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- JavaScript rendered customer rows -->
-                        </tbody>
-                    </table>
-                </div>
-            </main>
-
-            <!-- Right Sidebar: Shared Widgets -->
-            <aside class="analytics-sidebar">
-                <!-- Receipt of goods -->
-                <div class="receipt-card">
-                    <h2 class="analytics-title">Receipt of Goods</h2>
-                    <div class="chart-box">
-                        <svg class="chart-svg" viewBox="0 0 120 120">
-                            <circle class="chart-bg-circle" cx="60" cy="60" r="54"></circle>
-                            <circle class="chart-progress-circle" cx="60" cy="60" r="54"></circle>
-                        </svg>
-                        <div class="chart-center-text">
-                            <div class="chart-val">${total_revenue / 1000:.1f}k</div>
-                            <div class="chart-lbl">{total_orders_count} orders</div>
-                        </div>
-                    </div>
-                    <div class="receipt-breakdown">
-                        <div class="breakdown-item">
-                            <div class="breakdown-lbl"><span class="bullet bullet-green"></span>Shipments</div>
-                            <div class="breakdown-val">${sum(o["total"] for o in orders if o["type"] == "Shipping") / 1000:.1f}k</div>
-                        </div>
-                        <div class="breakdown-item" style="text-align: right;">
-                            <div class="breakdown-lbl" style="justify-content: flex-end;">Pickups<span class="bullet bullet-blue"></span></div>
-                            <div class="breakdown-val">${sum(o["total"] for o in orders if o["type"] == "Pickups") / 1000:.1f}k</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Orders Status -->
-                <div class="status-card">
-                    <div class="status-header">
-                        <h2 class="analytics-title">Orders Status</h2>
-                        <div class="status-dropdown">Active ▾</div>
-                    </div>
-                    <div class="progress-bar-container">
-                        <div class="progress-paid"></div>
-                        <div class="progress-cancelled"></div>
-                        <div class="progress-refunded"></div>
-                    </div>
-                    <div class="status-legend">
-                        <div class="legend-row">
-                            <div class="legend-name"><span class="bullet" style="background-color: #10b981;"></span> Paid</div>
-                            <div class="legend-val">{paid_pct}%</div>
-                        </div>
-                        <div class="legend-row">
-                            <div class="legend-name"><span class="bullet" style="background-color: #ef4444;"></span> Cancelled</div>
-                            <div class="legend-val">{cancelled_pct}%</div>
-                        </div>
-                        <div class="legend-row">
-                            <div class="legend-name"><span class="bullet" style="background-color: #64748b;"></span> Refunded</div>
-                            <div class="legend-val">{refunded_pct}%</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Overview Metrics Grid -->
-                <div class="overview-card">
-                    <div class="status-header">
-                        <h2 class="analytics-title">Overview</h2>
-                        <div class="status-dropdown">This month ▾</div>
-                    </div>
-                    <div class="overview-grid">
-                        <div class="metric-cell">
-                            <div class="metric-val">${avg_order_value:.2f}</div>
-                            <div class="metric-lbl">Average order</div>
-                        </div>
-                        <div class="metric-cell">
-                            <div class="metric-val">${total_revenue / 1000:.1f}k</div>
-                            <div class="metric-lbl">Total revenue</div>
-                        </div>
-                        <div class="metric-cell">
-                            <div class="metric-val">16 min</div>
-                            <div class="metric-lbl">Processing time</div>
-                        </div>
-                        <div class="metric-cell">
-                            <div class="metric-val">{avg_items_per_order:.1f}</div>
-                            <div class="metric-lbl">Avg. items/order</div>
-                        </div>
-                        <div class="metric-cell">
-                            <div class="metric-val">0.32%</div>
-                            <div class="metric-lbl">Pending orders</div>
-                        </div>
-                        <div class="metric-cell">
-                            <div class="metric-val">0.51%</div>
-                            <div class="metric-lbl">Reject rate</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Top Sellers -->
-                <div class="sellers-card">
-                    <div class="status-header">
-                        <h2 class="analytics-title">Top Sellers</h2>
-                        <div class="status-dropdown">This month ▾</div>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        {"".join(f'''
-                        <div class="seller-row">
-                            <div class="seller-item">
-                                <div class="seller-icon">👕</div>
-                                <div class="seller-info">
-                                    <div class="seller-name">{s["name"]}</div>
-                                    <div class="seller-desc">Revenue: ${s["revenue"]:.2f}</div>
-                                </div>
+                    <div class="analytics-row">
+                        <!-- Revenue analytics chart -->
+                        <div class="analytics-card">
+                            <div class="analytics-card-header">
+                                <h3 class="analytics-card-title">Revenue analytics</h3>
+                                <span style="font-size: 13px; font-weight: 600; color: #5c6066; cursor: pointer;">Yearly ▾</span>
                             </div>
-                            <div class="seller-count">{s["units"]}</div>
+                            <div class="revenue-chart-container">
+                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 120px;"></div><span class="revenue-bar-lbl">Jan</span></div>
+                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 60px;"></div><span class="revenue-bar-lbl">Feb</span></div>
+                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 180px;"></div><span class="revenue-bar-lbl">Mar</span></div>
+                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 100px;"></div><span class="revenue-bar-lbl">Apr</span></div>
+                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 140px;"></div><span class="revenue-bar-lbl">May</span></div>
+                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 220px;"></div><span class="revenue-bar-lbl">Jun</span></div>
+                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 170px;"></div><span class="revenue-bar-lbl">Jul</span></div>
+                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 130px;"></div><span class="revenue-bar-lbl">Aug</span></div>
+                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 220px;"></div><span class="revenue-bar-lbl">Sep</span></div>
+                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 160px;"></div><span class="revenue-bar-lbl">Oct</span></div>
+                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 195px;"></div><span class="revenue-bar-lbl">Nov</span></div>
+                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 110px;"></div><span class="revenue-bar-lbl">Dec</span></div>
+                            </div>
                         </div>
-                        ''' for s in top_sellers)}
+
+                        <!-- Sales by Traffic source chart -->
+                        <div class="analytics-card">
+                            <div class="analytics-card-header">
+                                <h3 class="analytics-card-title">Sales by traffic source</h3>
+                                <span class="action-dots">•••</span>
+                            </div>
+                            
+                            <div class="donut-chart-box">
+                                <svg class="donut-svg" viewBox="0 0 120 120">
+                                    <circle cx="60" cy="60" r="45" style="fill:none; stroke:#e9ecef; stroke-width:18;"></circle>
+                                    <circle class="donut-segment-1" cx="60" cy="60" r="45"></circle>
+                                    <circle class="donut-segment-2" cx="60" cy="60" r="45"></circle>
+                                    <circle class="donut-segment-3" cx="60" cy="60" r="45"></circle>
+                                </svg>
+                            </div>
+
+                            <table class="traffic-table">
+                                <thead>
+                                    <tr>
+                                        <th>Source</th>
+                                        <th>Orders</th>
+                                        <th style="text-align: right;">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="traffic-dot" style="background-color: #166534;"></span>Facebook</td>
+                                        <td>22</td>
+                                        <td style="text-align: right; font-weight: 600;">$2,742.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="traffic-dot" style="background-color: #d9f99d;"></span>YouTube</td>
+                                        <td>27</td>
+                                        <td style="text-align: right; font-weight: 600;">$3,272.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="traffic-dot" style="background-color: #f97316;"></span>Instagram</td>
+                                        <td>25</td>
+                                        <td style="text-align: right; font-weight: 600;">$2,922.00</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Recent Orders inside Dashboard -->
+                    <div class="table-card">
+                        <div class="table-card-header">
+                            <h3 class="table-title">Recent orders</h3>
+                            <span class="action-dots">•••</span>
+                        </div>
+                        <div class="data-table-wrapper">
+                            <table class="custom-data-table" id="dashboardRecentOrdersTable">
+                                <thead>
+                                    <tr>
+                                        <th>No.</th>
+                                        <th>Order Date</th>
+                                        <th>Ship Date</th>
+                                        <th>Customer</th>
+                                        <th>Items</th>
+                                        <th>Paid</th>
+                                        <th>Status</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic Orders mapped from Excel -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </aside>
+
+                <!-- 2. Products (Inventory) Tab View -->
+                <div id="inventory-view" style="display: none; flex-direction: column; gap: 24px; width: 100%;">
+                    <div class="table-card">
+                        <div class="table-card-header">
+                            <h3 class="table-title">Products & Inventory</h3>
+                            <div class="header-actions" style="display: flex; gap: 12px;">
+                                <button class="btn btn-light" onclick="alert('Reordering products...')">📦 Reorder</button>
+                                <button class="btn btn-dark" onclick="exportTableToCSV('inventoryTable', 'products_inventory.csv')">↑ Export</button>
+                            </div>
+                        </div>
+                        <div class="data-table-wrapper">
+                            <table class="custom-data-table" id="inventoryTable">
+                                <thead>
+                                    <tr>
+                                        <th>Product ID</th>
+                                        <th>Product Name</th>
+                                        <th>Category</th>
+                                        <th>Price</th>
+                                        <th>Current Stock</th>
+                                        <th>Original Stock</th>
+                                        <th>Units Sold</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Inventory rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Customer Tab View -->
+                <div id="customers-view" style="display: none; flex-direction: column; gap: 24px; width: 100%;">
+                    <div class="table-card">
+                        <div class="table-card-header">
+                            <h3 class="table-title">Customer Directory</h3>
+                            <div class="header-actions" style="display: flex; gap: 12px;">
+                                <button class="btn btn-light" onclick="alert('Exporting customers email list...')">✉️ Email list</button>
+                                <button class="btn btn-dark" onclick="exportTableToCSV('customersTable', 'customers_directory.csv')">↑ Export</button>
+                            </div>
+                        </div>
+                        <div class="data-table-wrapper">
+                            <table class="custom-data-table" id="customersTable">
+                                <thead>
+                                    <tr>
+                                        <th>Customer Name</th>
+                                        <th>Email Address</th>
+                                        <th>Phone</th>
+                                        <th>Shipping Address</th>
+                                        <th>Total Orders</th>
+                                        <th>Total Spent</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Customer rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Analytics (Payments) Tab View -->
+                <div id="payments-view" style="display: none; flex-direction: column; gap: 24px; width: 100%;">
+                    <div class="table-card">
+                        <div class="table-card-header">
+                            <h3 class="table-title">Transaction Analytics</h3>
+                            <div class="header-actions" style="display: flex; gap: 12px;">
+                                <button class="btn btn-light" onclick="alert('Generating invoice statements...')">🧾 Invoices</button>
+                                <button class="btn btn-dark" onclick="exportTableToCSV('paymentsTable', 'payments_analytics.csv')">↑ Export</button>
+                            </div>
+                        </div>
+                        <div class="data-table-wrapper">
+                            <table class="custom-data-table" id="paymentsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Payment ID</th>
+                                        <th>Customer</th>
+                                        <th>Payment Method</th>
+                                        <th>Total Amount</th>
+                                        <th>Status</th>
+                                        <th>Transaction Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Payment rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Orders Tab View -->
+                <div id="orders-view" style="display: none; flex-direction: column; gap: 24px; width: 100%;">
+                    <div class="table-card">
+                        <div class="table-card-header">
+                            <h3 class="table-title">Orders Management</h3>
+                            <div class="header-actions" style="display: flex; gap: 12px;">
+                                <button class="btn btn-light" onclick="alert('Importing spreadsheet logs...')">↓ Import</button>
+                                <button class="btn btn-dark" onclick="exportTableToCSV('ordersTable', 'orders_report.csv')">↑ Export</button>
+                            </div>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="filters-section" style="margin-bottom: 20px;">
+                            <div class="filter-pill active" onclick="setFilter('status', 'all', this)">All status</div>
+                            <div class="filter-pill" onclick="setFilter('status', 'Complete', this)">🟢 Complete</div>
+                            <div class="filter-pill" onclick="setFilter('status', 'Pending', this)">🟡 Pending</div>
+                            <div class="filter-pill" onclick="setFilter('status', 'Cancel', this)">🔴 Cancel</div>
+                            <div class="filter-pill" onclick="setFilter('status', 'Hold', this)">⚫ Hold</div>
+                            <div class="filter-pill" onclick="setFilter('type', 'Shipping', this)">🚚 Shipping</div>
+                            <div class="filter-pill" onclick="setFilter('type', 'Pickups', this)">🛍️ Pickups</div>
+                        </div>
+
+                        <div class="data-table-wrapper">
+                            <table class="custom-data-table" id="ordersTable">
+                                <thead>
+                                    <tr>
+                                        <th class="checkbox-cell">
+                                            <div class="custom-checkbox" id="headerCheckbox" onclick="toggleSelectAll()"></div>
+                                        </th>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Main Product</th>
+                                        <th>Total</th>
+                                        <th>Date</th>
+                                        <th style="width: 48px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Orders rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Floating action overlay when rows are checked -->
@@ -1640,7 +1342,6 @@ html_code = f"""
                 <button class="btn-overlay" onclick="exportSelectedOrders()">↑ Export</button>
                 <button class="btn-overlay" onclick="alert('Printing selected orders...')">🖨️ Print</button>
                 <button class="btn-overlay" onclick="alert('Duplicating selected orders...')">📋 Duplicate</button>
-                <span class="action-dots" style="color: #ffffff; padding: 0 8px;">•••</span>
             </div>
         </div>
 
@@ -1679,8 +1380,8 @@ html_code = f"""
 
                     <div class="modal-tabs">
                         <div class="modal-tab active">Order items</div>
-                        <div class="modal-tab" onclick="alert('Delivery logistics tracking...')">Delivery</div>
-                        <div class="modal-tab" onclick="alert('Invoice docs and receipts...')">Docs</div>
+                        <div class="modal-tab" onclick="alert('Tracking shipment details...')">Delivery</div>
+                        <div class="modal-tab" onclick="alert('Invoice transactions documentation...')">Docs</div>
                     </div>
 
                     <div class="modal-item-list" id="modalItemsList">
@@ -1712,7 +1413,7 @@ html_code = f"""
         let selectedOrders = new Set();
         let currentFilterType = 'status';
         let currentFilterVal = 'all';
-        let activeTab = 'orders';
+        let activeTab = 'dashboard';
 
         // Tab Switch Router
         function switchTab(tabName, el) {{
@@ -1733,21 +1434,52 @@ html_code = f"""
             }});
 
             // Dynamically search update header
-            const searchInput = document.getElementById("searchInput");
-            searchInput.placeholder = "Search " + tabName + "...";
+            const searchInput = document.querySelector(".nav-search-box input");
+            searchInput.placeholder = "Search something here...";
             searchInput.value = "";
 
             renderActiveTabContent();
         }}
 
         function renderActiveTabContent() {{
-            if (activeTab === 'orders') renderOrdersTable();
+            if (activeTab === 'dashboard') renderDashboardRecentOrders();
+            else if (activeTab === 'orders') renderOrdersTable();
             else if (activeTab === 'inventory') renderInventoryTable();
             else if (activeTab === 'payments') renderPaymentsTable();
             else if (activeTab === 'customers') renderCustomersTable();
         }}
 
-        // Render standard Orders Table
+        // Render Recent Orders inside Dashboard Tab
+        function renderDashboardRecentOrders() {{
+            const tbody = document.querySelector("#dashboardRecentOrdersTable tbody");
+            tbody.innerHTML = "";
+
+            ordersData.slice(0, 5).forEach(order => {{
+                const tr = document.createElement("tr");
+                tr.setAttribute("onclick", `showOrderDetails("${{order.order_id}}", event)`);
+                
+                const paidClass = order.paid === 'Yes' ? 'yes' : 'no';
+                const statusClass = order.status.toLowerCase();
+                
+                tr.innerHTML = `
+                    <td style="font-weight: 600; color: #1a1c1e;">${{order.order_id}}</td>
+                    <td>${{order.date}}</td>
+                    <td>${{order.date}}</td>
+                    <td style="font-weight: 500; color: #1a1c1e;">${{order.customer}}</td>
+                    <td>${{order.total_units}}</td>
+                    <td>
+                        <span class="paid-badge ${{paidClass}}">${{order.paid}}</span>
+                    </td>
+                    <td>
+                        <span class="badge-pill ${{statusClass}}">${{order.status}}</span>
+                    </td>
+                    <td style="font-weight: 600; color: #1a1c1e;">$${{order.total.toFixed(2)}}</td>
+                `;
+                tbody.appendChild(tr);
+            }});
+        }}
+
+        // Render standard Orders Table in Orders Tab
         function renderOrdersTable() {{
             const tbody = document.querySelector("#ordersTable tbody");
             tbody.innerHTML = "";
@@ -1766,12 +1498,13 @@ html_code = f"""
                 tr.setAttribute("onclick", `showOrderDetails("${{order.order_id}}", event)`);
                 
                 const isChecked = selectedOrders.has(order.order_id) ? "checked" : "";
+                const statusClass = order.status.toLowerCase();
                 
                 tr.innerHTML = `
                     <td class="checkbox-cell" onclick="event.stopPropagation()">
                         <div class="custom-checkbox ${{isChecked}}" onclick="toggleSelectRow('${{order.order_id}}', this)"></div>
                     </td>
-                    <td style="font-weight: 600; color: #0f172a;">${{order.order_id}}</td>
+                    <td style="font-weight: 600; color: #1a1c1e;">${{order.order_id}}</td>
                     <td>
                         <div class="customer-cell">
                             <div class="cust-avatar">${{order.customer.substring(0,2).toUpperCase()}}</div>
@@ -1780,13 +1513,13 @@ html_code = f"""
                     </td>
                     <td>${{order.type}}</td>
                     <td>
-                        <span class="badge-status ${{order.status.toLowerCase()}}">${{order.status}}</span>
+                        <span class="badge-pill ${{statusClass}}">${{order.status}}</span>
                     </td>
-                    <td style="color: #475569; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${{order.main_product}}</td>
-                    <td style="font-weight: 600; color: #0f172a;">$${{order.total.toFixed(2)}}</td>
-                    <td style="color: #64748b;">${{order.date}}</td>
+                    <td style="color: #5c6066; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${{order.main_product}}</td>
+                    <td style="font-weight: 600; color: #1a1c1e;">$${{order.total.toFixed(2)}}</td>
+                    <td style="color: #a0a5ad;">${{order.date}}</td>
                     <td onclick="event.stopPropagation()">
-                        <span class="action-dots" onclick="alert('Order options panel coming soon...')">•••</span>
+                        <span class="action-dots" onclick="alert('Orders parameters settings panel ready...')">•••</span>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1803,22 +1536,22 @@ html_code = f"""
 
             inventoryData.forEach(item => {{
                 const tr = document.createElement("tr");
-                const badgeClass = item.status === 'Healthy' ? 'healthy' : 'low';
+                const badgeClass = item.status === 'Healthy' ? 'complete' : 'cancel';
                 const badgeLabel = item.status === 'Healthy' ? 'Healthy' : 'Low Stock';
                 
                 tr.innerHTML = `
-                    <td style="font-weight: 600; color: #0f172a;">${{item.product_id}}</td>
+                    <td style="font-weight: 600; color: #1a1c1e;">${{item.product_id}}</td>
                     <td style="font-weight: 500;">${{item.product_name}}</td>
                     <td>${{item.category}}</td>
                     <td>${{item.price}}</td>
-                    <td style="font-weight: 600; color: #0f172a;">${{item.current_stock}}</td>
-                    <td style="color: #64748b;">${{item.original_stock}}</td>
-                    <td style="font-weight: 600; color: #0f172a;">${{item.units_sold}}</td>
+                    <td style="font-weight: 600; color: #1a1c1e;">${{item.current_stock}}</td>
+                    <td style="color: #a0a5ad;">${{item.original_stock}}</td>
+                    <td style="font-weight: 600; color: #1a1c1e;">${{item.units_sold}}</td>
                     <td>
-                        <span class="badge-status ${{badgeClass}}">${{badgeLabel}}</span>
+                        <span class="badge-pill ${{badgeClass}}">${{badgeLabel}}</span>
                     </td>
                     <td>
-                        <span class="action-dots" onclick="alert('Stock reorder panel opened...')">•••</span>
+                        <span class="action-dots" onclick="alert('Stock reordering procedures initiated...')">•••</span>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1832,11 +1565,12 @@ html_code = f"""
 
             ordersData.forEach(o => {{
                 const tr = document.createElement("tr");
-                const payId = o.order_id.replace("#", "PAY-");
+                const payId = o.order_id.replace("#00", "PAY-");
                 const method = o.type === 'Shipping' ? 'Credit Card' : 'Bank Transfer';
+                const statusClass = o.status.toLowerCase();
                 
                 tr.innerHTML = `
-                    <td style="font-weight: 600; color: #0f172a;">${{payId}}</td>
+                    <td style="font-weight: 600; color: #1a1c1e;">${{payId}}</td>
                     <td>
                         <div class="customer-cell">
                             <div class="cust-avatar">${{o.customer.substring(0,2).toUpperCase()}}</div>
@@ -1844,13 +1578,13 @@ html_code = f"""
                         </div>
                     </td>
                     <td>${{method}}</td>
-                    <td style="font-weight: 600; color: #0f172a;">$${{o.total.toFixed(2)}}</td>
+                    <td style="font-weight: 600; color: #1a1c1e;">$${{o.total.toFixed(2)}}</td>
                     <td>
-                        <span class="badge-status ${{o.status.toLowerCase()}}">${{o.status}}</span>
+                        <span class="badge-pill ${{statusClass}}">${{o.status}}</span>
                     </td>
-                    <td style="color: #64748b;">${{o.date}}</td>
+                    <td style="color: #a0a5ad;">${{o.date}}</td>
                     <td>
-                        <span class="action-dots" onclick="alert('Payment invoice details ready for export')">•••</span>
+                        <span class="action-dots" onclick="alert('Transactions detailed statement ready')">•••</span>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1874,11 +1608,11 @@ html_code = f"""
                     </td>
                     <td>${{c.email}}</td>
                     <td>${{c.phone}}</td>
-                    <td style="font-size: 12px; line-height: 1.4; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${{c.address}}</td>
-                    <td style="font-weight: 600; color: #0f172a; text-align: center;">${{c.orders_count}}</td>
-                    <td style="font-weight: 600; color: #0f172a;">$${{c.total_spent.toFixed(2)}}</td>
+                    <td style="font-size: 12px; line-height: 1.4; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${{c.address}}</td>
+                    <td style="font-weight: 600; color: #1a1c1e; text-align: center;">${{c.orders_count}}</td>
+                    <td style="font-weight: 600; color: #1a1c1e;">$${{c.total_spent.toFixed(2)}}</td>
                     <td>
-                        <span class="action-dots" onclick="alert('Contacting customer...')">•••</span>
+                        <span class="action-dots" onclick="alert('Contacting customer directory profile...')">•••</span>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1947,6 +1681,23 @@ html_code = f"""
             }}
         }}
 
+        function deselectAll() {{
+            selectedOrders.clear();
+            renderOrdersTable();
+        }}
+
+        function updateActionOverlay() {{
+            const overlay = document.getElementById("actionOverlay");
+            const badge = document.getElementById("selectedCountText");
+            
+            if (selectedOrders.size > 0 && activeTab === 'orders') {{
+                badge.innerText = `Selected: ${{selectedOrders.size}}`;
+                overlay.classList.add("active");
+            }} else {{
+                overlay.classList.remove("active");
+            }}
+        }}
+
         // Popover Details Modal
         function showOrderDetails(orderId, event) {{
             const order = ordersData.find(o => o.order_id === orderId);
@@ -2003,7 +1754,8 @@ html_code = f"""
         function filterTableSearch() {{
             const query = document.getElementById("searchInput").value.toLowerCase();
             let tbodyId = "";
-            if (activeTab === 'orders') tbodyId = "#ordersTable tbody";
+            if (activeTab === 'dashboard') tbodyId = "#dashboardRecentOrdersTable tbody";
+            else if (activeTab === 'orders') tbodyId = "#ordersTable tbody";
             else if (activeTab === 'inventory') tbodyId = "#inventoryTable tbody";
             else if (activeTab === 'payments') tbodyId = "#paymentsTable tbody";
             else if (activeTab === 'customers') tbodyId = "#customersTable tbody";
@@ -2131,7 +1883,7 @@ html_code = f"""
 
         // Setup onload default tab
         window.onload = () => {{
-            switchTab('orders');
+            switchTab('dashboard');
         }};
     </script>
 </body>
@@ -2139,4 +1891,4 @@ html_code = f"""
 """
 
 # Render dynamic layout in Streamlit
-st.components.v1.html(html_code, height=920, scrolling=True)
+st.components.v1.html(html_code, height=940, scrolling=True)
