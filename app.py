@@ -5,7 +5,7 @@ import os
 
 # Set page config for a full-width experience and tab title
 st.set_page_config(
-    page_title="Mate Sales Dashboard",
+    page_title="Avril Sales Dashboard",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -177,7 +177,7 @@ html_code = f"""
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mate Sales Dashboard</title>
+    <title>Avril Sales Dashboard</title>
     <style>
         * {{
             margin: 0;
@@ -1282,8 +1282,8 @@ html_code = f"""
             <div>
                 <div class="sidebar-brand">
                     <div class="brand-logo">
-                        <div class="brand-logo-icon">M</div>
-                        <span>Mate</span>
+                        <div class="brand-logo-icon">A</div>
+                        <span>Avril</span>
                     </div>
                     <div class="sidebar-collapse-btn">←</div>
                 </div>
