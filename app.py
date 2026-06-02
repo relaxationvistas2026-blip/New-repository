@@ -1301,9 +1301,6 @@ html_code = f"""
                     <li class="menu-item" id="menu-inventory" onclick="switchTab('inventory', this)"><a>📦 Inventory</a></li>
                     <li class="menu-item" id="menu-payments" onclick="switchTab('payments', this)"><a>💳 Payments</a></li>
                     <li class="menu-item" id="menu-customers" onclick="switchTab('customers', this)"><a>👥 Customers</a></li>
-                    <li class="menu-item" onclick="alert('Notification Center opened')"><a>🔔 Notifications <span class="badge">7</span></a></li>
-                    <li class="menu-item" onclick="alert('Help and Support portal is under maintenance')"><a>❓ Help & support</a></li>
-                    <li class="menu-item" onclick="alert('Settings configured successfully')"><a>⚙️ Settings</a></li>
                 </ul>
             </div>
 

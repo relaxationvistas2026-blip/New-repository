@@ -1,12 +1,12 @@
 Order ID,Customer,Type,Status,Product,Total,Date
-#192540,Trevor,Pickups,Paid,Classic Flare Skirt,$156.00,May 30
-#192539,Mike,Pickups,Paid,Classic Flare Skirt,$213.00,May 30
-#192538,Mary,Pickups,Paid,Classic Flare Skirt,$56.00,May 30
-#192537,Leo,Pickups,Paid,Premium Minimalist Tee,$350.00,May 30
-#192536,Leo,Pickups,Paid,Streetwear Cargo Joggers,$42.00,May 29
-#192535,Justin Bieber,Shipping,Paid,Racing Edition Polo Shirt,$45.00,May 29
-#192534,Julia,Pickups,Paid,Classic Camp Collar Shirt,$1252.00,May 30
-#192533,Jeneffer,Pickups,Cancelled,AeroFit Sports T-Shirt,$70.00,May 28
-#192532,Haily,Pickups,Paid,Streetwear Cargo Joggers,$210.00,Jun 02
-#192531,Avril,Pickups,Paid,Premium Minimalist Tee,$25.00,May 30
-#192530,Avril,Pickups,Paid,Premium Minimalist Tee,$50.00,May 29
+#192540,Trevor,Pickups,Paid,Classic Flare Skirt,$156.00 ,May-30
+#192539,Mike,Pickups,Paid,Classic Flare Skirt,$213.00 ,May-30
+#192538,Mary,Pickups,Paid,Classic Flare Skirt,$56.00 ,May-30
+#192537,Leo,Pickups,Paid,Premium Minimalist Tee,$350.00 ,May-30
+#192536,Leo,Pickups,Paid,Streetwear Cargo Joggers,$42.00 ,May-29
+#192535,Justin Bieber,Shipping,Paid,Racing Edition Polo Shirt,$45.00 ,May-29
+#192534,Julia,Pickups,Paid,Classic Camp Collar Shirt,"$1,252.00 ",May-30
+#192533,Jeneffer,Pickups,Cancelled,AeroFit Sports T-Shirt,$70.00 ,May-28
+#192532,Haily,Pickups,Paid,Streetwear Cargo Joggers,$210.00 ,Jun-02
+#192531,Avril,Pickups,Paid,Premium Minimalist Tee,$25.00 ,May-30
+#192530,Avril,Pickups,Paid,Premium Minimalist Tee,$50.00 ,May-29
