@@ -176,6 +176,18 @@ orders_json = json.dumps(orders)
 inventory_json = json.dumps(inventory)
 customers_json = json.dumps(customers)
 
+# Generate dynamic Revenue analytics by product bar chart HTML
+bar_chart_html = ""
+for s in top_sellers[:6]:
+    short_name = s["name"].replace("Cozy Oversized Hoodie", "Hoodie").replace("Classic Camp Collar Shirt", "Camp Shirt").replace("Racing Edition Polo Shirt", "Polo").replace("Premium Minimalist Tee", "Tee").replace("Streetwear Cargo Joggers", "Joggers").replace("Active Dry-Fit T-Shirt", "Dry-Fit")
+    height = int((s["revenue"] / 5000.0) * 200)
+    bar_chart_html += f'''
+    <div class="revenue-bar-wrapper" style="width: 14%;">
+        <div class="revenue-bar-fill" style="height: {height}px;" title="{s["name"]}: ${s["revenue"]:,.2f}"></div>
+        <span class="revenue-bar-lbl" style="font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px;">{short_name}</span>
+    </div>
+    '''
+
 # HTML & CSS template with full structural layouts for all 5 tabs and a client-side Javascript router
 html_code = f"""
 <!DOCTYPE html>
@@ -1014,15 +1026,6 @@ html_code = f"""
                     <li class="menu-item" id="menu-customers" onclick="switchTab('customers', this)"><a>👥 Customer</a></li>
                     <li class="menu-item" id="menu-payments" onclick="switchTab('payments', this)"><a>💳 Analytics</a></li>
                     <li class="menu-item" id="menu-orders" onclick="switchTab('orders', this)"><a>📋 Orders</a></li>
-                    <li class="menu-item" onclick="alert('Coupons portal coming soon...')"><a>🏷️ Coupons</a></li>
-                    <li class="menu-item" onclick="alert('Chats and support panel')"><a>💬 Chats <span class="badge">4</span></a></li>
-                </ul>
-
-                <div class="sidebar-section-title" style="margin-top: 24px;">OTHER</div>
-                <ul class="menu-list">
-                    <li class="menu-item" onclick="alert('Integrations configured successfully')"><a>🔌 Integrations</a></li>
-                    <li class="menu-item" onclick="alert('Settings parameters updated')"><a>⚙️ Settings</a></li>
-                    <li class="menu-item" onclick="alert('Logged out successfully')"><a>🚪 Logout</a></li>
                 </ul>
             </div>
 
@@ -1044,9 +1047,6 @@ html_code = f"""
                     <input type="text" id="searchInput" placeholder="Search something here..." onkeyup="filterTableSearch()">
                 </div>
                 <div class="nav-right">
-                    <span class="nav-icon-btn" onclick="alert('Notifications Center')">🔔<span class="badge-dot"></span></span>
-                    <span class="nav-icon-btn" onclick="alert('Support chats center')">💬</span>
-                    
                     <div class="nav-profile">
                         <div class="nav-profile-avatar">SH</div>
                         <div class="nav-profile-info">
@@ -1101,29 +1101,18 @@ html_code = f"""
                         <!-- Revenue analytics chart -->
                         <div class="analytics-card">
                             <div class="analytics-card-header">
-                                <h3 class="analytics-card-title">Revenue analytics</h3>
-                                <span style="font-size: 13px; font-weight: 600; color: #5c6066; cursor: pointer;">Yearly ▾</span>
+                                <h3 class="analytics-card-title">Revenue analytics by product</h3>
+                                <span style="font-size: 13px; font-weight: 600; color: #5c6066; cursor: pointer;">Top Sellers ▾</span>
                             </div>
                             <div class="revenue-chart-container">
-                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 120px;"></div><span class="revenue-bar-lbl">Jan</span></div>
-                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 60px;"></div><span class="revenue-bar-lbl">Feb</span></div>
-                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 180px;"></div><span class="revenue-bar-lbl">Mar</span></div>
-                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 100px;"></div><span class="revenue-bar-lbl">Apr</span></div>
-                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 140px;"></div><span class="revenue-bar-lbl">May</span></div>
-                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 220px;"></div><span class="revenue-bar-lbl">Jun</span></div>
-                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 170px;"></div><span class="revenue-bar-lbl">Jul</span></div>
-                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 130px;"></div><span class="revenue-bar-lbl">Aug</span></div>
-                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 220px;"></div><span class="revenue-bar-lbl">Sep</span></div>
-                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 160px;"></div><span class="revenue-bar-lbl">Oct</span></div>
-                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 195px;"></div><span class="revenue-bar-lbl">Nov</span></div>
-                                <div class="revenue-bar-wrapper"><div class="revenue-bar-fill" style="height: 110px;"></div><span class="revenue-bar-lbl">Dec</span></div>
+                                {bar_chart_html}
                             </div>
                         </div>
 
-                        <!-- Sales by Traffic source chart -->
+                        <!-- Sales by product chart -->
                         <div class="analytics-card">
                             <div class="analytics-card-header">
-                                <h3 class="analytics-card-title">Sales by traffic source</h3>
+                                <h3 class="analytics-card-title">Sales by product</h3>
                                 <span class="action-dots">•••</span>
                             </div>
                             
@@ -1139,26 +1128,26 @@ html_code = f"""
                             <table class="traffic-table">
                                 <thead>
                                     <tr>
-                                        <th>Source</th>
-                                        <th>Orders</th>
-                                        <th style="text-align: right;">Amount</th>
+                                        <th>Product</th>
+                                        <th>Sales</th>
+                                        <th style="text-align: right;">Revenue</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td><span class="traffic-dot" style="background-color: #166534;"></span>Facebook</td>
-                                        <td>22</td>
-                                        <td style="text-align: right; font-weight: 600;">$2,742.00</td>
+                                        <td><span class="traffic-dot" style="background-color: #166534;"></span>Hoodie</td>
+                                        <td>91</td>
+                                        <td style="text-align: right; font-weight: 600;">$4,550.00</td>
                                     </tr>
                                     <tr>
-                                        <td><span class="traffic-dot" style="background-color: #d9f99d;"></span>YouTube</td>
-                                        <td>27</td>
-                                        <td style="text-align: right; font-weight: 600;">$3,272.00</td>
+                                        <td><span class="traffic-dot" style="background-color: #d9f99d;"></span>Minimalist Tee</td>
+                                        <td>85</td>
+                                        <td style="text-align: right; font-weight: 600;">$2,125.00</td>
                                     </tr>
                                     <tr>
-                                        <td><span class="traffic-dot" style="background-color: #f97316;"></span>Instagram</td>
-                                        <td>25</td>
-                                        <td style="text-align: right; font-weight: 600;">$2,922.00</td>
+                                        <td><span class="traffic-dot" style="background-color: #f97316;"></span>Camp Shirt</td>
+                                        <td>71</td>
+                                        <td style="text-align: right; font-weight: 600;">$2,840.00</td>
                                     </tr>
                                 </tbody>
                             </table>
