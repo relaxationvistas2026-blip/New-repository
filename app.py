@@ -183,7 +183,7 @@ html_code = f"""
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-family: "Aptos Narrow", Aptos, Arial, sans-serif;
             -webkit-font-smoothing: antialiased;
         }}
         
