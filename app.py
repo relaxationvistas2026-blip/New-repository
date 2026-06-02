@@ -17,17 +17,20 @@ excel_file = "Antigravity Sales Agent.xlsx"
 @st.cache_data
 def load_and_process_data(file_path):
     if not os.path.exists(file_path):
-        return None, None, None, None
+        return [], [], [], []
     
-    # Read sheets
-    df_customers = pd.read_excel(file_path, sheet_name="Customers")
-    df_sales = pd.read_excel(file_path, sheet_name="Daily Sales")
-    df_inventory = pd.read_excel(file_path, sheet_name="Inventory")
-    
-    # Clean sheet names and string spacing
-    df_customers.columns = df_customers.columns.str.strip()
-    df_sales.columns = df_sales.columns.str.strip()
-    df_inventory.columns = df_inventory.columns.str.strip()
+    try:
+        # Read sheets
+        df_customers = pd.read_excel(file_path, sheet_name="Customers")
+        df_sales = pd.read_excel(file_path, sheet_name="Daily Sales")
+        df_inventory = pd.read_excel(file_path, sheet_name="Inventory")
+        
+        # Clean sheet names and string spacing
+        df_customers.columns = df_customers.columns.str.strip()
+        df_sales.columns = df_sales.columns.str.strip()
+        df_inventory.columns = df_inventory.columns.str.strip()
+    except Exception as e:
+        return [], [], [], []
     
     # Handle dates
     df_sales["Date"] = pd.to_datetime(df_sales["Date"]).dt.strftime("%Y-%m-%d")
@@ -170,6 +173,10 @@ refunded_pct = 100 - paid_pct - cancelled_pct
 # Calculate overview parameters
 avg_order_value = total_revenue / total_orders_count if total_orders_count > 0 else 0
 avg_items_per_order = sum(sum(p["units"] for p in o["products"]) for o in orders) / total_orders_count if total_orders_count > 0 else 0
+
+total_stock = sum(item["current_stock"] for item in inventory)
+healthy_count = sum(1 for item in inventory if item["status"] == "Healthy")
+low_stock_count = sum(1 for item in inventory if item["status"] == "Low Stock")
 
 # Convert metrics to JSON for client side
 orders_json = json.dumps(orders)
@@ -1015,8 +1022,8 @@ html_code = f"""
         <aside class="sidebar">
             <div>
                 <div class="sidebar-brand">
-                    <span class="brand-logo-icon">🛒</span>
-                    <span>Ex Com</span>
+                    <span class="brand-logo-icon">💼</span>
+                    <span>Avril's Business</span>
                 </div>
 
                 <div class="sidebar-section-title">MENU</div>
@@ -1028,32 +1035,15 @@ html_code = f"""
                     <li class="menu-item" id="menu-orders" onclick="switchTab('orders', this)"><a>📋 Orders</a></li>
                 </ul>
             </div>
-
-            <div class="sidebar-footer" style="border-top: 1px solid #e9ecef; padding-top: 16px;">
-                <div class="nav-profile-avatar" style="width: 32px; height: 32px;">OW</div>
-                <div class="nav-profile-info" style="margin-left: 8px;">
-                    <span class="nav-profile-name" style="font-size: 12px;">Olivia Williams</span>
-                    <span class="nav-profile-email" style="font-size: 10px;">Sales Manager</span>
-                </div>
-            </div>
         </aside>
 
         <!-- Main Workspace Wrapper -->
         <div class="workspace-wrapper">
             <!-- Top Navbar -->
             <header class="navbar">
-                <div class="nav-search-box">
-                    <span>🔍</span>
-                    <input type="text" id="searchInput" placeholder="Search something here..." onkeyup="filterTableSearch()">
-                </div>
+                <span style="font-size: 14px; font-weight: 600; color: #a0a5ad;">Avril's Business Operations Dashboard</span>
                 <div class="nav-right">
-                    <div class="nav-profile">
-                        <div class="nav-profile-avatar">SH</div>
-                        <div class="nav-profile-info">
-                            <span class="nav-profile-name">Sifat Hasan</span>
-                            <span class="nav-profile-email">sifatux@gmail.com</span>
-                        </div>
-                    </div>
+                    <span style="font-size: 13px; color: #5c6066; font-weight: 500;">Status: Active</span>
                 </div>
             </header>
 
@@ -1075,13 +1065,13 @@ html_code = f"""
                         </div>
                         <div class="dashboard-card">
                             <div class="dashboard-card-header">
-                                <span>Average order value</span>
+                                <span>Stock Status</span>
                                 <span class="action-dots">•••</span>
                             </div>
-                            <span class="dashboard-card-val">${avg_order_value:.2f}</span>
+                            <span class="dashboard-card-val">{total_stock} units</span>
                             <div class="dashboard-card-footer">
-                                <span class="card-change-badge down">▼ 16%</span>
-                                <span>Compared to December 2023</span>
+                                <span class="card-change-badge up">🟢 {healthy_count} Healthy</span>
+                                <span style="color: #ef4444; font-weight: 600;">⚠️ {low_stock_count} Low Stock</span>
                             </div>
                         </div>
                         <div class="dashboard-card">
@@ -1741,7 +1731,9 @@ html_code = f"""
 
         // Search filtering across all active list views
         function filterTableSearch() {{
-            const query = document.getElementById("searchInput").value.toLowerCase();
+            const searchInput = document.getElementById("searchInput");
+            if (!searchInput) return;
+            const query = searchInput.value.toLowerCase();
             let tbodyId = "";
             if (activeTab === 'dashboard') tbodyId = "#dashboardRecentOrdersTable tbody";
             else if (activeTab === 'orders') tbodyId = "#ordersTable tbody";
